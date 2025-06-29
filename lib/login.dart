@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // เพิ่มบรรทัดนี้
-
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -14,30 +13,35 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
 
   void handleLogin() async {
-  final email = emailController.text;
-  final password = passwordController.text;
+    final email = emailController.text;
+    final password = passwordController.text;
 
-  final url = Uri.parse('http://192.168.1.55:8000/users/login');
+    final url = Uri.parse('http://192.168.1.55:8000/users/login');
 
-  final response = await http.post(
-    url,
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({'email': email, 'password': password}),
-  );
-
-  if (response.statusCode == 200) {
-    final secureStorage = FlutterSecureStorage();
-    await secureStorage.write(key: 'isLoggedIn', value: 'true');
-
-    Navigator.pushReplacementNamed(context, '/home');
-  } else {
-    final errorMsg = jsonDecode(response.body)['error'];
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(errorMsg)),
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'password': password}),
     );
-  }
-}
 
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(response.body);
+
+      // สมมติ userId อยู่ใน responseData['userId']
+      final userId = responseData['userId'];
+
+      final secureStorage = FlutterSecureStorage();
+      await secureStorage.write(key: 'isLoggedIn', value: 'true');
+      await secureStorage.write(key: 'userId', value: userId);
+
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      final errorMsg = jsonDecode(response.body)['error'];
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMsg)));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
             TextField(
               controller: emailController,
               decoration: InputDecoration(
-                labelText: 'อีเมล',
+                labelText: 'อีเมล/ชื่อผู้ใข้',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -74,8 +78,8 @@ class _LoginScreenState extends State<LoginScreen> {
             ElevatedButton(
               onPressed: handleLogin,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red, 
-                foregroundColor: Colors.white, 
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
                 textStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 shape: RoundedRectangleBorder(

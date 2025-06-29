@@ -4,7 +4,8 @@ import 'login.dart';
 import 'register.dart';
 import 'profile.dart';
 import 'splash.dart'; 
-
+import 'chat.dart';
+import 'addChatRoom.dart';
 void main() {
   runApp(MyApp());
 }
@@ -23,6 +24,9 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginScreen(),
         '/register': (context) => RegisterScreen(),
         '/profile': (context) => ProfileScreen(),
+        '/chat': (context) => ChatScreen(),
+        '/addChatRoom': (context) => AddChatRoomScreen(),
+
       },
       theme: ThemeData(
         appBarTheme: AppBarTheme(

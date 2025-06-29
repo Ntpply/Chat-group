@@ -139,15 +139,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _pickBirthDate,
-                      child: Text(birthDateText),
-                    ),
-                  ),
-                ],
+              TextField(
+                readOnly: true,
+                onTap: _pickBirthDate,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.calendar_today),
+                  hintText: 'เลือกวันเกิด',
+                ),
+                controller: TextEditingController(text: birthDateText),
               ),
               SizedBox(height: 24),
               ElevatedButton(

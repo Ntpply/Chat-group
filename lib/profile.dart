@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -8,61 +9,66 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  int _selectedIndex = 2;
-
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
     if (index == 0) {
-      Navigator.pushNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, '/home');
+    } else if (index == 1) {
+      Navigator.pushNamed(context, '/notifications');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> _pages = <Widget>[
-      Center(child: Text('หน้าหลัก')), // index 0
-      Center(child: Text('แจ้งเตือน')), // index 1
-      Padding(
+    return Scaffold(
+      appBar: AppBar(title: Text('โปรไฟล์')),
+      body: Padding(
         padding: EdgeInsets.all(20),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.red,
-                borderRadius: BorderRadius.circular(50),
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                ),
+                SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('nitipoom', style: TextStyle(fontSize: 18)),
+                    Text('dasdasd', style: TextStyle(color: Colors.grey[700])),
+                  ],
+                ),
+              ],
             ),
-            Container(
-              width: double.infinity, 
-              margin: EdgeInsets.only(left: 10),
-              decoration: BoxDecoration( color: Colors.blue,),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [Text('nitipoom'), Text('dasdasd')],
+            SizedBox(height: 30),
+            ElevatedButton.icon(
+              onPressed: () async {
+                final storage = FlutterSecureStorage();
+                await storage.delete(key: 'isLoggedIn');
+                Navigator.pushReplacementNamed(context, '/');
+              },
+              icon: Icon(Icons.logout),
+              label: Text('ออกจากระบบ'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
               ),
             ),
           ],
         ),
       ),
-    ];
-
-    return Scaffold(
-      appBar: AppBar(title: Text('โปรไฟล์')),
-      body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
+        currentIndex: 2, 
         onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'หน้าหลัก'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'แจ้งเตือน',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'แจ้งเตือน'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'โปรไฟล์'),
         ],
       ),
