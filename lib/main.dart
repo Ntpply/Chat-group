@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
-import 'home.dart';
-import 'login.dart';
-import 'register.dart';
-import 'profile.dart';
-import 'splash.dart'; 
-import 'chat.dart';
-import 'addChatRoom.dart';
+import 'screens/home.dart';
+import 'screens/login.dart';
+import 'screens/register.dart';
+import 'screens/profile.dart';
+import 'widgets/isLogin.dart';
+
+import 'screens/chat.dart'; 
+import 'screens/addChatRoom.dart';
+import 'screens/gallery.dart';
+
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -19,17 +22,17 @@ class MyApp extends StatelessWidget {
       title: 'My App',
       initialRoute: '/',
       routes: {
-        '/': (context) => SplashScreen(),
+        '/': (context) =>  SplashScreen(),
         '/home': (context) => HomeScreen(),
         '/login': (context) => LoginScreen(),
         '/register': (context) => RegisterScreen(),
         '/profile': (context) => ProfileScreen(),
         '/chat': (context) => ChatScreen(),
         '/addChatRoom': (context) => AddChatRoomScreen(),
-
+        '/gallery': (context) => GalleryScreen(),
       },
       theme: ThemeData(
-        appBarTheme: AppBarTheme(
+        appBarTheme: const AppBarTheme(
           backgroundColor: Colors.red,
           titleTextStyle: TextStyle(fontSize: 20, color: Colors.white),
         ),
