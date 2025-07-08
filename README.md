@@ -8,7 +8,7 @@ Nitipoom Pilayont
 - [Chat-group-API](https://github.com/Ntpply/Chat-group-API)
   
 ## Installation and Setup
-### 1. install and Check your SDK
+### 1. install and Check your SDK.
 ```bash
   $ flutter doctor
 ```
