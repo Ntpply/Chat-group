@@ -5,7 +5,7 @@ This is my Flutter useTo Socket.io.
 Nitipoom Pilayont
 
 ## Installation and Setup
-### 1. npm install 
+### 1. install and Check your SDK
 ```bash
   $ flutter doctor
 ```
