@@ -1,5 +1,5 @@
 # Chat group
-This is my Flutter useTo Socket.io.
+This is my Flutter useTo Socket.io
 
 ## Developed By
 Nitipoom Pilayont
