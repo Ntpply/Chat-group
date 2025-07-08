@@ -13,7 +13,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<LogoutEvent>(_onLogout);
   }
 
-  Future<void> _onLoadProfile(LoadProfileEvent event, Emitter<ProfileState> emit) async {
+  Future<void> _onLoadProfile(
+    LoadProfileEvent event,
+    Emitter<ProfileState> emit,
+  ) async {
     emit(state.copyWith(isLoading: true));
 
     final userId = await secureStorage.read(key: 'userId');
@@ -23,16 +26,21 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     }
 
     final url = Uri.parse('http://192.168.1.55:8000/users/user/$userId');
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      emit(state.copyWith(
-        username: data['username'],
-        email: data['email'],
-        isLoading: false,
-      ));
-    } else {
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        emit(
+          state.copyWith(
+            username: data['username'],
+            email: data['email'],
+            isLoading: false,
+          ),
+        );
+      } else {
+        emit(state.copyWith(isLoading: false));
+      }
+    } catch (e) {
       emit(state.copyWith(isLoading: false));
     }
   }

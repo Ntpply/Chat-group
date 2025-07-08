@@ -18,43 +18,54 @@ class _ChatScreenState extends State<ChatScreen> {
   String? userName;
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  bool _hasScrolledOnce = false;
+  bool _showScrollToBottomButton = false;
 
   @override
   void initState() {
     super.initState();
-    // เพิ่ม listener สำหรับการเลื่อนอัตโนมัติ
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToBottom();
-    });
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+
+    final threshold = 300.0;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+
+    final isFarFromBottom = (maxScroll - currentScroll) > threshold;
+
+    if (isFarFromBottom != _showScrollToBottomButton) {
+      setState(() {
+        _showScrollToBottomButton = isFarFromBottom;
+      });
+    }
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _scrollToBottom({bool animated = true}) {
-    if (_scrollController.hasClients) {
-      if (animated) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      } else {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-      }
+  void _scrollToBottomOnce() {
+    if (_scrollController.hasClients && !_hasScrolledOnce) {
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      _hasScrolledOnce = true;
     }
   }
 
-  void _scrollToBottomDelayed() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 50), () {
-        _scrollToBottom();
-      });
-    });
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   @override
@@ -64,16 +75,10 @@ class _ChatScreenState extends State<ChatScreen> {
     roomId = args?['roomId'];
     roomName = args?['roomName'];
     userName = args?['userName'];
-    
+
     return BlocProvider(
       create: (_) => ChatBloc()
-        ..add(
-          InitializeChat(
-            args?['roomId'] ?? '',
-            args?['roomName'] ?? '',
-            args?['userName'] ?? '',
-          ),
-        ),
+        ..add(InitializeChat(roomId ?? '', roomName ?? '', userName ?? '')),
       child: BlocConsumer<ChatBloc, ChatState>(
         listener: (context, state) {
           if (state.error != null) {
@@ -89,166 +94,158 @@ class _ChatScreenState extends State<ChatScreen> {
             );
             context.read<ChatBloc>().add(ClearError());
           }
-          
-          // เลื่อนไปล่าสุดเมื่อมีข้อความใหม่หรือเริ่มต้น
-          if (state.messages.isNotEmpty) {
-            _scrollToBottomDelayed();
-          }
         },
         builder: (context, state) {
-          return Scaffold(
-            backgroundColor: Colors.grey.shade50,
-            appBar: AppBar(
-              title: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    state.roomName ?? 'แชท',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToBottomOnce();
+          });
+
+          return Stack(
+            children: [
+              Scaffold(
+                backgroundColor: Colors.grey.shade50,
+                appBar: AppBar(
+                  title: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        state.roomName ?? 'แชท',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Text(
+                        'กำลังออนไลน์',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
                   ),
-                  const Text(
-                    'กำลังออนไลน์',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.white70,
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.more_vert, size: 24),
+                      onPressed: () {
+                        _showMenuOptions(context, state);
+                      },
+                      tooltip: 'ตัวเลือกเพิ่มเติม',
                     ),
-                  ),
-                ],
-              ),
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shadowColor: Colors.transparent,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.more_vert, size: 24),
-                  onPressed: () {
-                    _showMenuOptions(context, state);
-                  },
-                  tooltip: 'ตัวเลือกเพิ่มเติม',
-                ),
-              ],
-            ),
-            body: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    const Color.fromARGB(255, 255, 61, 12).withOpacity(0.05),
-                    Colors.grey.shade50,
                   ],
                 ),
-              ),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: state.isLoading
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Color(0xFF1976D2),
-                              ),
-                            ),
-                          )
-                        : state.messages.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.chat_bubble_outline,
-                                      size: 64,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'ยังไม่มีข้อความ',
-                                      style: TextStyle(
-                                        color: Colors.grey.shade600,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'เริ่มแชทกันเลย!',
-                                      style: TextStyle(
-                                        color: Colors.grey.shade500,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
+                body: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        const Color.fromARGB(255, 255, 61, 12).withOpacity(0.05),
+                        Colors.grey.shade50,
+                      ],
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: state.isLoading
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Color(0xFF1976D2),
+                                  ),
                                 ),
                               )
-                            : NotificationListener<ScrollNotification>(
-                                onNotification: (notification) {
-                                  return false;
-                                },
-                                child: ListView.builder(
-                                  controller: _scrollController,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  itemCount: state.messages.length,
-                                  // เพิ่มประสิทธิภาพการเลื่อน
-                                  physics: const BouncingScrollPhysics(),
-                                  // ใช้ cache extent เพื่อการเลื่อนที่ราบรื่น
-                                  cacheExtent: 1000,
-                                  itemBuilder: (context, index) {
-                                    final message = state.messages[index];
-                                    final timestamp = DateTime.parse(
-                                      message['timestamp'],
-                                    );
-                                    final showDateSeparator = _shouldShowDateSeparator(
-                                      state.messages,
-                                      index,
-                                    );
-                                    
-                                    return Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                            : state.messages.isEmpty
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                        if (showDateSeparator)
-                                          _buildDateSeparator(timestamp),
-                                        _buildMessage(message, state.userName),
+                                        Icon(
+                                          Icons.chat_bubble_outline,
+                                          size: 64,
+                                          color: Colors.grey.shade400,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'ยังไม่มีข้อความ',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'เริ่มแชทกันเลย!',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade500,
+                                            fontSize: 14,
+                                          ),
+                                        ),
                                       ],
-                                    );
-                                  },
-                                ),
-                              ),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    controller: _scrollController,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    itemCount: state.messages.length,
+                                    physics: const BouncingScrollPhysics(),
+                                    itemBuilder: (context, index) {
+                                      final message = state.messages[index];
+                                      final timestamp = DateTime.parse(
+                                          message['timestamp']);
+                                      final showDateSeparator =
+                                          _shouldShowDateSeparator(
+                                              state.messages, index);
+
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          if (showDateSeparator)
+                                            _buildDateSeparator(timestamp),
+                                          _buildMessage(
+                                              message, state.userName),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                      ),
+                      _buildInputBar(context, state),
+                    ],
                   ),
-                  _buildInputBar(context, state),
-                ],
+                ),
               ),
-            ),
+              if (_showScrollToBottomButton)
+                Positioned(
+                  bottom: 90,
+                  right: 16,
+                  child: FloatingActionButton(
+                    mini: true,
+                    backgroundColor: const Color(0xFF1976D2),
+                    onPressed: _scrollToBottom,
+                    child: const Icon(Icons.arrow_downward, color: Colors.white),
+                  ),
+                ),
+            ],
           );
         },
       ),
     );
   }
 
-  void _navigateToImageGallery() {
-    if (roomId == null || roomName == null) {
-      print('Room ID or Room Name is null');
-      return;
-    }
-
-    Navigator.pushNamed(
-      context,
-      '/gallery',
-      arguments: {'roomId': roomId, 'roomName': roomName},
-    );
-  }
-
   bool _shouldShowDateSeparator(
-    List<Map<String, dynamic>> messages,
-    int index,
-  ) {
+      List<Map<String, dynamic>> messages, int index) {
     if (index == 0) return true;
     final currentDate = DateTime.parse(messages[index]['timestamp']);
     final previousDate = DateTime.parse(messages[index - 1]['timestamp']);
@@ -262,14 +259,15 @@ class _ChatScreenState extends State<ChatScreen> {
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final messageDate = DateTime(date.year, date.month, date.day);
-    
+
     String dateText;
     if (messageDate == today) {
       dateText = 'วันนี้';
     } else if (messageDate == yesterday) {
       dateText = 'เมื่อวาน';
     } else {
-      dateText = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+      dateText =
+          '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
     }
 
     return Center(
@@ -302,12 +300,14 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildMessage(Map<String, dynamic> message, String? currentUserName) {
     final isMe = message['sender'] == currentUserName;
     final timestamp = DateTime.parse(message['timestamp']);
-    final timeString = '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
-    
+    final timeString =
+        '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Column(
-        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment:
+            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           if (!isMe)
             Padding(
@@ -322,36 +322,29 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           Row(
-            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment:
+                isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              if (isMe) ...[
+              if (isMe)
                 Padding(
                   padding: const EdgeInsets.only(right: 8, bottom: 4),
                   child: Text(
                     timeString,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey.shade500,
-                    ),
+                    style:
+                        TextStyle(fontSize: 10, color: Colors.grey.shade500),
                   ),
                 ),
-              ],
-              Flexible(
-                child: _buildMessageBubble(message, isMe),
-              ),
-              if (!isMe) ...[
+              Flexible(child: _buildMessageBubble(message, isMe)),
+              if (!isMe)
                 Padding(
                   padding: const EdgeInsets.only(left: 8, bottom: 4),
                   child: Text(
                     timeString,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey.shade500,
-                    ),
+                    style:
+                        TextStyle(fontSize: 10, color: Colors.grey.shade500),
                   ),
                 ),
-              ],
             ],
           ),
         ],
@@ -380,12 +373,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final imageBytes = base64Decode(base64Str.split(',').last);
       messageContent = ClipRRect(
         borderRadius: borderRadius,
-        child: Image.memory(
-          imageBytes,
-          width: 200,
-          fit: BoxFit.cover,
-
-        ),
+        child: Image.memory(imageBytes, width: 200, fit: BoxFit.cover),
       );
     } else {
       messageContent = Container(
@@ -453,7 +441,9 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               child: IconButton(
                 icon: Icon(
-                  state.isSendingImage ? Icons.hourglass_empty : Icons.image_outlined,
+                  state.isSendingImage
+                      ? Icons.hourglass_empty
+                      : Icons.image_outlined,
                   color: const Color(0xFF1976D2),
                   size: 22,
                 ),
@@ -475,7 +465,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: TextField(
                   controller: _controller,
                   textInputAction: TextInputAction.send,
-                  onSubmitted: (value) {
+                  onSubmitted: (_) {
                     _sendMessage(context);
                   },
                   style: const TextStyle(fontSize: 14),
@@ -502,14 +492,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 borderRadius: BorderRadius.circular(24),
               ),
               child: IconButton(
-                icon: const Icon(
-                  Icons.send,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                onPressed: () {
-                  _sendMessage(context);
-                },
+                icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                onPressed: () => _sendMessage(context),
                 tooltip: 'ส่งข้อความ',
               ),
             ),
@@ -522,12 +506,13 @@ class _ChatScreenState extends State<ChatScreen> {
   void _sendMessage(BuildContext context) {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-    
     context.read<ChatBloc>().add(SendMessage(text, 'text'));
     _controller.clear();
-    
-    // เลื่อนไปข้อความล่าสุดหลังส่ง
-    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        _scrollToBottom();
+      });
+    });
   }
 
   void _showMenuOptions(BuildContext context, ChatState state) {
@@ -538,10 +523,7 @@ class _ChatScreenState extends State<ChatScreen> {
         return Container(
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: SafeArea(
             child: Wrap(
@@ -578,7 +560,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   const Color(0xFF1976D2),
                   () {
                     Navigator.pop(ctx);
-                    // TODO: เพิ่มฟังก์ชันดูสมาชิก
+                    _navigateToAllMember();
                   },
                 ),
                 _buildMenuTile(
@@ -636,6 +618,28 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+    );
+  }
+
+  void _navigateToImageGallery() {
+    if (roomId == null || roomName == null) return;
+    Navigator.pushNamed(
+      context,
+      '/gallery',
+      arguments: {'roomId': roomId, 'roomName': roomName},
+    );
+  }
+
+  void _navigateToAllMember() {
+    if (roomId == null || roomName == null) return;
+    Navigator.pushNamed(
+      context,
+      '/allMember',
+      arguments: {
+        'roomId': roomId,
+        'roomName': roomName,
+        'currentUsername': userName,
+      },
     );
   }
 }
