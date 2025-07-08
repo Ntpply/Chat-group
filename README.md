@@ -5,7 +5,7 @@ This is my Flutter useTo Socket.io.
 Nitipoom Pilayont
 
 ## Related Repositories
-- [JonggyApi](https://github.com/Ntpply/FlutterAPI)
+- [Chat-group-API](https://github.com/Ntpply/Chat-group-API)
   
 ## Installation and Setup
 ### 1. install and Check your SDK
